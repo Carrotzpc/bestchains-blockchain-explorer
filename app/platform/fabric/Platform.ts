@@ -88,10 +88,13 @@ export class Platform {
 		await this.buildClients(network_configs);
 
 		if (this.networks.size === 0) {
-			logger.error(
+			logger.warn(
 				'************* There is no client found for Hyperledger fabric platform *************'
 			);
-			throw new ExplorerError(explorerError.ERROR_2008);
+			/*
+			 * do not throw error when networks is null
+			 * throw new ExplorerError(explorerError.ERROR_2008);
+			 */
 		}
 	}
 
@@ -191,6 +194,7 @@ export class Platform {
 	 * @memberof Platform
 	 */
 	initializeListener(syncconfig) {
+		this.destroy();
 		/* eslint-disable */
 		for (const [network_id, clientObj] of this.networks.entries()) {
 			const network_name = clientObj.name;
@@ -248,6 +252,9 @@ export class Platform {
 	getClient(network_id) {
 		logger.info(`getClient (id:${network_id})`);
 		const clientObj = this.networks.get(network_id || this.defaultNetwork);
+		if (!clientObj) {
+			throw new Error(`client (id:${network_id}) not found.`);
+		}
 		return clientObj.instance;
 	}
 

@@ -38,6 +38,10 @@ export class FabricConfig {
 
 	initialize(network_id, network_config) {
 		this.network_id = network_id;
+		if (network_config.profile && typeof network_config.profile === 'object') {
+			this.config = network_config.profile;
+			return;
+		}
 		const profile_path = path.resolve(__dirname, network_config.profile);
 		const configJson = fs.readFileSync(profile_path, 'utf8');
 		this.config = JSON.parse(configJson);

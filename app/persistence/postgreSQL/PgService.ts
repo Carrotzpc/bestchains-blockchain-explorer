@@ -120,7 +120,9 @@ export class PgService {
 					throw err;
 				}
 			});
-			await this.client.connect();
+			await this.client.connect(
+				err => err && logger.error('connect to db err =>', err)
+			);
 		} catch (err) {
 			if (err) {
 				/*

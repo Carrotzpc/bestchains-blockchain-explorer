@@ -12,6 +12,7 @@ app/test/coverage/
 .idea/*
 venv
 .vscode
+.history
 
 test/fabric-samples
 tmp/*

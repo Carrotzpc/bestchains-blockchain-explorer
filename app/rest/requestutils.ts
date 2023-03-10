@@ -3,6 +3,10 @@
  */
 
 import queryString from 'query-string';
+import { helper } from '../common/helper';
+
+const logger = helper.getLogger('requestutils');
+
 /**
  *
  *
@@ -16,6 +20,7 @@ async function respond(action, req, res, next) {
 		const value = await action(req, res, next);
 		res.status(200).send(value);
 	} catch (error) {
+		logger.error('respond error', error);
 		res.send({
 			status: 400,
 			message: error.toString()

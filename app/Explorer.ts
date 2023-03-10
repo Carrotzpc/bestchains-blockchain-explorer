@@ -15,6 +15,8 @@ import { authroutes } from './rest/authroutes';
 import { dbroutes } from './rest/dbroutes';
 import { platformroutes } from './rest/platformroutes';
 import { adminroutes } from './platform/fabric/rest/adminroutes';
+// eslint-disable-next-line spellcheck/spell-checker
+import { spiRoutes } from './platform/fabric/rest/spi-routes';
 import { explorerConst } from './common/ExplorerConst';
 import { explorerError } from './common/ExplorerMessage';
 import { authCheckMiddleware } from './middleware/auth-check';
@@ -127,6 +129,13 @@ export class Explorer {
 
 			this.app.use('/auth', authrouter);
 			this.app.use('/api', apirouter);
+
+			// eslint-disable-next-line spellcheck/spell-checker
+			// spi
+			const spiRouter = Express.Router();
+			spiRoutes(spiRouter, platform);
+			// eslint-disable-next-line spellcheck/spell-checker
+			this.app.use('/spi', spiRouter);
 
 			// Initializing sync listener
 			platform.initializeListener(explorerconfig.sync);

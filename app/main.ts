@@ -22,6 +22,9 @@ import appconfig from './appconfig.json';
 import { Explorer } from './Explorer';
 import { ExplorerError } from './common/ExplorerError';
 
+// eslint-disable-next-line spellcheck/spell-checker
+import 'express-async-errors';
+
 const logger = helper.getLogger('main');
 
 const sslEnabled = process.env.SSL_ENABLED || appconfig.sslEnabled;
@@ -74,7 +77,6 @@ let server;
 let explorer;
 async function startExplorer() {
 	explorer = new Explorer();
-
 	// Application headers
 	explorer.getApp().use(helmet());
 
@@ -119,6 +121,13 @@ async function startExplorer() {
 		.getApp()
 		.use(express.static(path.join(__dirname, '..', 'client/build')));
 
+	explorer.getApp().use((err, req, res, next) => {
+		logger.error('catch error', err);
+		if (err.stack.startsWith('Error:')) {
+			return res.status(500).send({ error: err.message });
+		}
+		next(err);
+	});
 	// ============= start server =======================
 	server.listen(port, () => {
 		logger.info(

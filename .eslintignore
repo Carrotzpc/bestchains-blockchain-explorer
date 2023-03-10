@@ -16,4 +16,4 @@
 **/client/src/components/App/*.spec.js
 **/client/wdio.conf.js
 **/client/e2e-test/**/*.js
-
+dist
