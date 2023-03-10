@@ -1,8 +1,8 @@
+#!/bin/bash
+
 #
 #    SPDX-License-Identifier: Apache-2.0
 #
-
-#!/bin/bash
 
 # Please visit ./logs/sync/app to view the application logs and visit the ./logs/sync/db to view the Database logs and visit the ./logs/sync/console for the console.log
 # Log rotating for every 7 days.
