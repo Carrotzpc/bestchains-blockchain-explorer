@@ -4,6 +4,16 @@
 
 echo "Copying ENV variables into temp file..."
 node processenv.js
+if [ $(jq .HOST /tmp/process.env.json) == null ]; then
+  export HOST=$(jq -r .postgreSQL.host ../../../../explorerconfig.json )
+else
+  export HOST=$(jq -r .HOST /tmp/process.env.json)
+fi
+if [ $(jq .PORT /tmp/process.env.json) == null ]; then
+  export PORT=$(jq -r .postgreSQL.port ../../../../explorerconfig.json )
+else
+  export PORT=$(jq -r .PORT /tmp/process.env.json)
+fi
 if [ $( jq .DATABASE_USERNAME /tmp/process.env.json) == null ]; then
   export USER=$( jq .postgreSQL.username ../../../../explorerconfig.json )
 else
@@ -37,8 +47,8 @@ if [ $(id -un) = 'postgres' ]; then
 else
   PSQL="sudo -u postgres psql"
 fi;
-${PSQL} -v dbname=$DATABASE -v user=$USER -v passwd=$PASSWD -f ./explorerpg.sql ;
-${PSQL} -v dbname=$DATABASE -v user=$USER -v passwd=$PASSWD -f ./updatepg.sql ;;
+${PSQL} -v dbname=$DATABASE -v user=$USER -v passwd=$PASSWD -h $HOST -p $PORT -f ./explorerpg.sql ;
+${PSQL} -v dbname=$DATABASE -v user=$USER -v passwd=$PASSWD -h $HOST -p $PORT -f ./updatepg.sql ;;
 esac
 
 

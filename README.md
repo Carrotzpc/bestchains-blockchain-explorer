@@ -18,6 +18,9 @@ Explorer is a simple, powerful, easy-to-use, well-maintained, open-source utilit
 
 **Update!** Explorer now can be used with [**Hyperledger Iroha**](https://github.com/hyperledger/iroha). For Iroha support, please switch to [iroha-integration](../../tree/iroha-integration) branch and read this [README](../../tree/iroha-integration/iroha) for instructions on how to use it.
 
+# Strongly recommended
+
+- ** Use node v13.14.0 **
 
 # Release Notes
 
@@ -276,8 +279,8 @@ $ cd blockchain-explorer/app
     ```
 
 Connect to the PostgreSQL database and run DB status commands. To export the
-settings from `app/explorerconfig.json` to the environment, run `source
-app/exportConfig.sh`; this will set `$DATABASE_DATABASE` and related envvars.
+settings from `app/explorerconfig.json` to the environment, run `cd app; source
+exportConfig.sh`; this will set `$DATABASE_DATABASE` and related envvars.
 
 * **Ubuntu**
 
