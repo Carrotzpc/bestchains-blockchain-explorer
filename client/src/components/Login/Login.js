@@ -107,10 +107,10 @@ export class Login extends Component {
 			networks,
 			network: {
 				error: null,
-				value: networks[0].name || '',
-				id: networks[0].id
+				value: networks[0]?.name || '',
+				id: networks[0]?.id
 			},
-			authEnabled: networks[0].authEnabled
+			authEnabled: networks[0]?.authEnabled || false
 		}));
 	}
 
@@ -172,16 +172,12 @@ export class Login extends Component {
 		 * If we have only one network and it doesn't have auth enabled, perform a login
 		 * autoLoginAttempted is a safety to prevent multiple tries
 		 */
-		if (
-			networks.length === 1 &&
-			!networks[0].authEnabled &&
-			!autoLoginAttempted
-		) {
+		if (!networks[0]?.authEnabled && !autoLoginAttempted) {
 			// eslint-disable-next-line react/no-did-update-set-state
 			this.setState(() => ({
 				autoLoginAttempted: true
 			}));
-			await this.performLogin({ network: networks[0].id });
+			await this.performLogin({ network: networks[0]?.id });
 		}
 	}
 

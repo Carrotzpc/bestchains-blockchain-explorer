@@ -8,6 +8,7 @@
  *
  */
 
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import path from 'path';
@@ -100,6 +101,7 @@ async function startExplorer() {
 			}
 		})
 	);
+	explorer.getApp().use(cookieParser());
 	/* eslint-enable */
 	// Application headers
 

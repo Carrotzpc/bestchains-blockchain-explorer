@@ -4,6 +4,7 @@
 
 import Express from 'express';
 import bodyParser from 'body-parser';
+import * as fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 import compression from 'compression';
 import passport from 'passport';
@@ -15,6 +16,7 @@ import { authroutes } from './rest/authroutes';
 import { dbroutes } from './rest/dbroutes';
 import { platformroutes } from './rest/platformroutes';
 import { adminroutes } from './platform/fabric/rest/adminroutes';
+// eslint-disable-next-line spellcheck/spell-checker
 import { spiRoutes } from './platform/fabric/rest/spi-routes';
 import { explorerConst } from './common/ExplorerConst';
 import { explorerError } from './common/ExplorerMessage';
@@ -22,8 +24,10 @@ import { authCheckMiddleware } from './middleware/auth-check';
 import swaggerDocument from './swagger.json';
 import { ExplorerError } from './common/ExplorerError';
 import { localLoginStrategy } from './passport/local-login';
-import * as fs from 'fs';
-
+// eslint-disable-next-line spellcheck/spell-checker
+import { oidcRoutes } from './rest/oidc/routes';
+// eslint-disable-next-line spellcheck/spell-checker
+import { oidcTokenCheckMiddleware } from './middleware/oidc-token-check';
 
 /**
  *
@@ -99,9 +103,12 @@ export class Explorer {
 			explorerconfig[explorerconfig[explorerConst.PERSISTENCE]]
 		);
 
+		// eslint-disable-next-line spellcheck/spell-checker
 		// prepare workdir for this blockchain-explorer
-		if(!fs.existsSync(explorerconfig[explorerConst.SYNC].workdir)){
-			fs.mkdirSync(explorerconfig[explorerConst.SYNC].workdir, { recursive: true });
+		if (!fs.existsSync(explorerconfig[explorerConst.SYNC].workdir)) {
+			fs.mkdirSync(explorerconfig[explorerConst.SYNC].workdir, {
+				recursive: true
+			});
 		}
 
 		for (const pltfrm of explorerconfig[explorerConst.PLATFORMS]) {
@@ -120,7 +127,7 @@ export class Explorer {
 			// Make sure that platform instance will be referred after its initialization
 			passport.use('local-login', localLoginStrategy(platform));
 
-			this.app.use('/api', authCheckMiddleware);
+			this.app.use('/', oidcTokenCheckMiddleware);
 
 			const authrouter = Express.Router();
 
@@ -142,6 +149,11 @@ export class Explorer {
 			await spiRoutes(spiRouter, platform);
 			// eslint-disable-next-line spellcheck/spell-checker
 			this.app.use('/spi', spiRouter);
+
+			const oidcRouter = Express.Router();
+			oidcRoutes(oidcRouter, platform);
+			// eslint-disable-next-line spellcheck/spell-checker
+			this.app.use('/oidc', oidcRouter);
 
 			this.platforms.push(platform);
 		}
