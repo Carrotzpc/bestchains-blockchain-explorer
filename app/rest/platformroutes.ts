@@ -40,12 +40,11 @@ export async function platformroutes(
 		const channel_genesis_hash = req.params.channel_genesis_hash;
 
 		if (channel_genesis_hash) {
-			proxy
+			return proxy
 				.getTxByOrgs(req.network, channel_genesis_hash)
 				.then((rows: any) => res.send({ status: 200, rows }));
-		} else {
-			return requtil.invalidRequest(req, res);
 		}
+		return requtil.invalidRequest(req, res);
 	});
 
 	/**
@@ -62,7 +61,7 @@ export async function platformroutes(
 	 * ]
 	 */
 	router.get('/channels/info', (req, res) => {
-		proxy
+		return proxy
 			.getChannelsInfo(req.network)
 			.then((data: any[]) => {
 				data.forEach((element: { createdat: string | number | Date }) => {
@@ -88,12 +87,11 @@ export async function platformroutes(
 	router.get('/peersStatus/:channel', (req, res) => {
 		const channelName = req.params.channel;
 		if (channelName) {
-			proxy.getPeersStatus(req.network, channelName).then((data: any) => {
+			return proxy.getPeersStatus(req.network, channelName).then((data: any) => {
 				res.send({ status: 200, peers: data });
 			});
-		} else {
-			return requtil.invalidRequest(req, res);
 		}
+		return requtil.invalidRequest(req, res);
 	});
 
 	/**
@@ -106,31 +104,32 @@ export async function platformroutes(
 		const number = parseInt(req.params.number);
 		const channel_genesis_hash = req.params.channel_genesis_hash;
 		if (!isNaN(number) && channel_genesis_hash) {
-			proxy.getBlockByNumber(req.network, channel_genesis_hash, number).then(
-				(block: {
-					header: {
-						number: { toString: () => any };
-						previous_hash: { toString: (arg0: string) => any };
-						data_hash: { toString: (arg0: string) => any };
-					};
-					data: { data: any };
-				}) => {
-					if (typeof block === 'string') {
-						res.send({ status: 500, error: block });
-					} else {
-						res.send({
-							status: 200,
-							number: block.header.number.toString(),
-							previous_hash: block.header.previous_hash.toString('hex'),
-							data_hash: block.header.data_hash.toString('hex'),
-							transactions: block.data.data
-						});
+			return proxy
+				.getBlockByNumber(req.network, channel_genesis_hash, number)
+				.then(
+					(block: {
+						header: {
+							number: { toString: () => any };
+							previous_hash: { toString: (arg0: string) => any };
+							data_hash: { toString: (arg0: string) => any };
+						};
+						data: { data: any };
+					}) => {
+						if (typeof block === 'string') {
+							res.send({ status: 500, error: block });
+						} else {
+							res.send({
+								status: 200,
+								number: block.header.number.toString(),
+								previous_hash: block.header.previous_hash.toString('hex'),
+								data_hash: block.header.data_hash.toString('hex'),
+								transactions: block.data.data
+							});
+						}
 					}
-				}
-			);
-		} else {
-			return requtil.invalidRequest(req, res);
+				);
 		}
+		return requtil.invalidRequest(req, res);
 	});
 
 	/**
@@ -147,7 +146,7 @@ export async function platformroutes(
 	 * }
 	 */
 	router.get('/channels', (req, res) => {
-		proxy.getChannels(req.network).then((channels: any) => {
+		return proxy.getChannels(req.network).then((channels: any) => {
 			const response = {
 				status: 200,
 				channels: channels
@@ -162,7 +161,7 @@ export async function platformroutes(
 	 * curl -i 'http://<host>:<port>/curChannel'
 	 */
 	router.get('/curChannel', (req, res) => {
-		proxy.getCurrentChannel(req.network).then((data: any) => {
+		return proxy.getCurrentChannel(req.network).then((data: any) => {
 			res.send(data);
 		});
 	});
@@ -174,11 +173,13 @@ export async function platformroutes(
 	 */
 	router.get('/changeChannel/:channel_genesis_hash', (req, res) => {
 		const channel_genesis_hash = req.params.channel_genesis_hash;
-		proxy.changeChannel(req.network, channel_genesis_hash).then((data: any) => {
-			res.send({
-				currentChannel: data
+		return proxy
+			.changeChannel(req.network, channel_genesis_hash)
+			.then((data: any) => {
+				res.send({
+					currentChannel: data
+				});
 			});
-		});
 	});
 
 	/**
@@ -187,45 +188,54 @@ export async function platformroutes(
 	 * GET /fetchDataByBlockNo
 	 * curl -i 'http://<host>:<port>/fetchDataByBlockNo/<channel_genesis_hash>/<blockNo>'
 	 */
-	router.get('/fetchDataByBlockNo/:channel_genesis_hash/:blockNo', (req, res) => {
-		const blockNo = parseInt(req.params.blockNo);
-		const channel_genesis_hash = req.params.channel_genesis_hash;
-		proxy.fetchDataByBlockNo(req.network, channel_genesis_hash, blockNo).then((data: any) => {
-			if (data != "response_payloads is null") {
-				res.send({ status: 200, data: data });
-			}
-			else{
-				res.send({ status: 404, data: "Block not found" });
-			}
-		});
-	});
+	router.get(
+		'/fetchDataByBlockNo/:channel_genesis_hash/:blockNo',
+		(req, res) => {
+			const blockNo = parseInt(req.params.blockNo);
+			const channel_genesis_hash = req.params.channel_genesis_hash;
+			return proxy
+				.fetchDataByBlockNo(req.network, channel_genesis_hash, blockNo)
+				.then((data: any) => {
+					if (data !== 'response_payloads is null') {
+						res.send({ status: 200, data: data });
+					} else {
+						res.send({ status: 404, data: 'Block not found' });
+					}
+				});
+		}
+	);
 
 	/**
 	 * *
 	 * Blocks by block range
 	 * GET /fetchDataByBlockRange
 	 * curl -i 'http://<host>:<port>/fetchDataByBlockRange/<channel_genesis_hash>/<startBlockNo>/<endBlockNo>'
-	 */	
-	router.get('/fetchDataByBlockRange/:channel_genesis_hash/:startBlockNo/:endBlockNo', (req, res) => {
-		const startBlockNo = parseInt(req.params.startBlockNo);
-		const endBlockNo = parseInt(req.params.endBlockNo);
-		const channel_genesis_hash = req.params.channel_genesis_hash;
-		if (startBlockNo < endBlockNo) {
-			proxy.fetchDataByBlockRange(req.network, channel_genesis_hash, startBlockNo, endBlockNo).then((data: any) => {
-				if (data != "response_payloads is null") {
-					res.send({ status: 200, data: data });
-				}
-				else{
-					res.send({ status: 404, data: "Block(s) not found" });
-				}
-			});
-		}
-		else {
+	 */
+	router.get(
+		'/fetchDataByBlockRange/:channel_genesis_hash/:startBlockNo/:endBlockNo',
+		(req, res) => {
+			const startBlockNo = parseInt(req.params.startBlockNo);
+			const endBlockNo = parseInt(req.params.endBlockNo);
+			const channel_genesis_hash = req.params.channel_genesis_hash;
+			if (startBlockNo < endBlockNo) {
+				return proxy
+					.fetchDataByBlockRange(
+						req.network,
+						channel_genesis_hash,
+						startBlockNo,
+						endBlockNo
+					)
+					.then((data: any) => {
+						if (data !== 'response_payloads is null') {
+							res.send({ status: 200, data: data });
+						} else {
+							res.send({ status: 404, data: 'Block(s) not found' });
+						}
+					});
+			}
 			return requtil.invalidRequest(req, res);
 		}
-
-	});
-
+	);
 
 	/**
 	 * *
@@ -236,15 +246,14 @@ export async function platformroutes(
 	router.get('/fetchDataByTxnId/:channel_genesis_hash/:txnId', (req, res) => {
 		const txnId = req.params.txnId;
 		const channel_genesis_hash = req.params.channel_genesis_hash;
-		proxy.fetchDataByTxnId(req.network, channel_genesis_hash, txnId).then((data: any) => {
-			if (data != null) {
-				res.send({ status: 200, data: data });
-			}
-			else{
-				res.send({ status: 404, data: "Transaction not found" });
-			}
-		});
+		return proxy
+			.fetchDataByTxnId(req.network, channel_genesis_hash, txnId)
+			.then((data: any) => {
+				if (data != null) {
+					res.send({ status: 200, data: data });
+				} else {
+					res.send({ status: 404, data: 'Transaction not found' });
+				}
+			});
 	});
-
-
 } // End platformroutes()
