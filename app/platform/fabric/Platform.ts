@@ -5,15 +5,12 @@
 import * as path from 'path';
 import fs from 'fs-extra';
 import { helper } from '../../common/helper';
-import { User } from './models/User';
 import { MetricService } from '../../persistence/fabric/MetricService';
 import { CRUDService } from '../../persistence/fabric/CRUDService';
 import { UserDataService } from '../../persistence/fabric/UserDataService';
 
 import { Proxy } from './Proxy';
-import { ExplorerError } from '../../common/ExplorerError';
 import { ExplorerListener } from '../../sync/listener/ExplorerListener';
-import { explorerError } from '../../common/ExplorerMessage';
 
 import { FabricConfig } from './FabricConfig';
 import { UserService } from './service/UserService';
@@ -38,7 +35,7 @@ export class Platform {
 	proxy: any;
 	defaultNetwork: string;
 	network_configs: Record<string, any>;
-	syncType: string;
+	syncConfig: any;
 	explorerListeners: any[];
 
 	/**
@@ -47,7 +44,8 @@ export class Platform {
 	 * @param {*} broadcaster
 	 * @memberof Platform
 	 */
-	constructor(persistence, broadcaster) {
+	constructor(syncConfig, persistence, broadcaster) {
+		this.syncConfig = syncConfig;
 		this.persistence = persistence;
 		this.broadcaster = broadcaster;
 		this.networks = new Map();
@@ -55,7 +53,6 @@ export class Platform {
 		this.proxy = null;
 		this.defaultNetwork = null;
 		this.network_configs = null;
-		this.syncType = null;
 		this.explorerListeners = [];
 	}
 
@@ -71,142 +68,97 @@ export class Platform {
 
 		// Loading the config.json
 		const all_config = JSON.parse(fs.readFileSync(config_path, 'utf8'));
-		const network_configs = all_config[fabric_const.NETWORK_CONFIGS];
-		this.syncType = all_config.syncType;
+		this.network_configs = all_config[fabric_const.NETWORK_CONFIGS];
 
 		this.userService = new UserService(this);
 		this.proxy = new Proxy(this, this.userService);
 
-		// Build client context
 		logger.debug(
 			'******* Initialization started for hyperledger fabric platform ******'
 		);
-		logger.debug(
-			'******* Initialization started for hyperledger fabric platform ******,',
-			network_configs
-		);
-		await this.buildClients(network_configs);
-
-		if (this.networks.size === 0) {
-			logger.error(
-				'************* There is no client found for Hyperledger fabric platform *************'
-			);
-			throw new ExplorerError(explorerError.ERROR_2008);
-		}
-	}
-
-	/**
-	 *
-	 *
-	 * @param {*} network_configs
-	 * @memberof Platform
-	 */
-	async buildClients(network_configs) {
-		/* eslint-disable */
-		const _self = this;
-		/* eslint-enable */
-
-		// Setting organization enrolment files
-		logger.debug('Setting admin organization enrolment files');
-		this.network_configs = network_configs;
 
 		for (const network_id in this.network_configs) {
-			const network_config = this.network_configs[network_id];
+			// Setting organization enrolment files
+			logger.debug('Setting admin organization enrolment files');
 			if (!this.defaultNetwork) {
 				this.defaultNetwork = network_id;
 			}
-
-			/*
-			 * Create fabric explorer client for each
-			 * Each client is connected to only a single peer and monitor that particular peer only
-			 */
-			logger.info(
-				' network_config.id ',
-				network_id,
-				' network_config.profile ',
-				network_config.profile
-			);
-
-			// Create client instance
-			logger.debug('Creating network client [%s] >> ', network_id, network_config);
-
-			const config = new FabricConfig();
-			config.initialize(network_id, network_config);
-
-			const signupResult = await this.registerAdmin(config);
-			if (!signupResult) {
-				logger.error(`Failed to register admin user : ${network_id}`);
-				continue;
+			try {
+				await this.initializeNetwork(network_id, this.network_configs[network_id]);
+			} catch (error) {
+				logger.error('Failed to initialize network %s', network_id);
+				logger.error(error);
 			}
-
-			const client = await FabricUtils.createFabricClient(
-				config,
-				this.persistence
-			);
-			if (client) {
-				// Set client into clients map
-				const clientObj = { name: network_config.name, instance: client };
-				this.networks.set(network_id, clientObj);
-			}
-			//  }
 		}
+		logger.info('Totally initialized %d networks', this.networks.size);
 	}
 
-	async registerAdmin(config) {
-		if (!config.getEnableAuthentication()) {
-			logger.info('Disabled authentication');
-			return true;
+	async initializeNetwork(network_id: string, network_config: any) {
+		if (!this.defaultNetwork) {
+			this.defaultNetwork = network_id;
 		}
-
-		const user = config.getAdminUser();
-		const password = config.getAdminPassword();
-		if (!user || !password) {
-			logger.error('Invalid credentials');
-			return false;
+		await this.buildClient(network_id, network_config);
+		const network_client = this.getClient(network_id);
+		if (network_client.getStatus()) {
+			logger.info('initailzie listener');
+			await this.initializeListener(
+				network_id,
+				network_config.name,
+				network_config.profile
+			);
+		} else {
+			throw new Error(`client (id:${network_id}) not found.`);
 		}
-
-		const network_id = config.getNetworkId();
-		const reqUser = await User.createInstanceWithParam(
-			user,
-			password,
-			network_id,
-			'admin'
-		).asJson();
-		if (await this.userService.isExist(user, network_id)) {
-			logger.info('Already registered : admin');
-			return true;
-		}
-		const resp = await this.userService.register(reqUser);
-		if (resp.status !== 200) {
-			logger.error('Failed to register admin user: ', resp.message);
-			return false;
-		}
-		return true;
 	}
 
 	/**
 	 *
-	 *
-	 * @param {*} syncconfig
+	 * @description build a client to connect with network
+	 * @param {*} network_id
+	 * @param {*} network_config
 	 * @memberof Platform
 	 */
-	initializeListener(syncconfig) {
-		/* eslint-disable */
-		for (const [network_id, clientObj] of this.networks.entries()) {
-			const network_name = clientObj.name;
-			const network_client = clientObj.instance;
-			logger.info(
-				'initializeListener, network_id, network_client ',
-				network_id,
-				network_client.getNetworkConfig()
-			);
-			if (network_client.getStatus()) {
-				const explorerListener = new ExplorerListener(this, syncconfig);
-				explorerListener.initialize([network_id, network_name, '1']);
-				explorerListener.send('Successfully send a message to child process');
-				this.explorerListeners.push(explorerListener);
-			}
+	async buildClient(network_id: string, network_config: any) {
+		// Create client instance
+		logger.info('Building network client [%s] >> ', network_id, network_config);
+
+		const config = new FabricConfig();
+		config.initialize(network_id, network_config.profile);
+
+		const client = await FabricUtils.createFabricClient(config, this.persistence);
+		if (client) {
+			// Set client into clients map
+			const clientObj = { name: network_config.name, instance: client };
+			this.networks.set(network_id, clientObj);
 		}
+	}
+
+	/**
+	 * @description initialize a network listener with pre-built network client
+	 * @param {*} network_id
+	 * @param {*} clientObj
+	 * @memberof Platform
+	 */
+	async initializeListener(
+		network_id: string,
+		network_name: string,
+		network_profile_path: string
+	) {
+		/* eslint-disable */
+		logger.info(
+			'initializeListener, network_id, network_name,network_profile_path ',
+			network_id,
+			network_name,
+			network_profile_path
+		);
+		const explorerListener = new ExplorerListener(this, this.syncConfig);
+		await explorerListener.initialize([
+			network_id,
+			network_name,
+			network_profile_path
+		]);
+		explorerListener.send('Successfully send a message to child process');
+		this.explorerListeners.push(explorerListener);
 		/* eslint-enable */
 	}
 
@@ -228,6 +180,14 @@ export class Platform {
 		);
 	}
 
+	getSyncWorkDir() {
+		return this.syncConfig.workdir;
+	}
+
+	getNetworkPorfilePath(network_id:string) {
+		return path.join(this.getSyncWorkDir(),network_id);
+	}
+
 	/**
 	 *
 	 *
@@ -241,6 +201,16 @@ export class Platform {
 	/**
 	 *
 	 *
+	 * @returns
+	 * @memberof Platform
+	 */
+	getNetwork(network_id) {
+		this.networks.get(network_id || this.defaultNetwork);
+	}
+
+	/**
+	 *
+	 *
 	 * @param {*} network_id
 	 * @returns
 	 * @memberof Platform
@@ -248,7 +218,10 @@ export class Platform {
 	getClient(network_id) {
 		logger.info(`getClient (id:${network_id})`);
 		const clientObj = this.networks.get(network_id || this.defaultNetwork);
-		return clientObj.instance;
+		if(clientObj){
+			return clientObj.instance
+		}
+		return null;
 	}
 
 	/**

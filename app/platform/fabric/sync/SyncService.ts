@@ -64,18 +64,6 @@ export class SyncServices {
 	 */
 	async synchNetworkConfigToDB(client) {
 		const channels = client.getChannels();
-		const channels_query = await client.fabricGateway.queryChannels();
-		if (!channels_query) {
-			logger.error('Not found any channels');
-			return false;
-		}
-
-		for (const channel of channels_query.channels) {
-			const channel_name = channel.channel_id;
-			if (!includes(channels, channel_name)) {
-				await client.initializeNewChannel(channel_name);
-			}
-		}
 
 		for (const channel_name of channels) {
 			logger.info(

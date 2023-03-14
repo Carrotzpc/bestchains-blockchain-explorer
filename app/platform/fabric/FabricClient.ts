@@ -5,7 +5,7 @@
 import { includes } from 'lodash';
 import { helper } from '../../common/helper';
 import { ExplorerError } from '../../common/ExplorerError';
-import { explorerError } from '../../common/ExplorerMessage';
+import { explorerMessage, explorerError } from '../../common/ExplorerMessage';
 import { FabricGateway } from '../../platform/fabric/gateway/FabricGateway';
 import * as FabricUtils from './utils/FabricUtils';
 
@@ -70,15 +70,14 @@ export class FabricClient {
 
 		if (channels) {
 			this.status = true;
-			logger.debug('Client channels >> %j', channels.channels);
 			// Initialize channel network information from Discover
-			for (const channel of channels.channels) {
-				logger.debug('Initializing channel ', channel.channel_id);
+			for (const channel of channels) {
+				logger.debug('Initializing channel ', channel);
 				try {
-					await this.initializeNewChannel(channel.channel_id);
-					logger.debug('Initialized channel >> %s', channel.channel_id);
+					await this.initializeNewChannel(channel);
+					logger.debug('Initialized channel >> %s', channel);
 				} catch (error) {
-					logger.error('Failed to initialize new channel: ', channel.channel_id);
+					logger.error('Failed to initialize new channel: ', channel);
 				}
 			}
 		} else if (persistence) {
@@ -105,7 +104,7 @@ export class FabricClient {
 			'************************************* initializeDetachClient *************************************************'
 		);
 		logger.info('Error :', explorerError.ERROR_1009);
-		logger.info('Info : ', explorerError.MESSAGE_1001);
+		logger.info('Info : ', explorerMessage.MESSAGE_1001);
 		logger.info(
 			'************************************** initializeDetachClient ************************************************'
 		);
@@ -114,7 +113,8 @@ export class FabricClient {
 			.getChannelsInfo(this.network_id);
 
 		if (channels.length === 0) {
-			throw new ExplorerError(explorerError.ERROR_2003);
+			logger.info('No channels found for network %s',this.network_id);
+			return;
 		}
 
 		for (const channel of channels) {

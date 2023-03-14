@@ -23,9 +23,14 @@ export class PlatformBuilder {
 	 * @returns
 	 * @memberof PlatformBuilder
 	 */
-	static async build(pltfrm: string, persistence: any, broadcaster: any) {
+	static async build(
+		pltfrm: string,
+		syncConfig: any,
+		persistence: any,
+		broadcaster: any
+	) {
 		if (pltfrm === explorerConst.PLATFORM_FABRIC) {
-			const platform = new Platform(persistence, broadcaster);
+			const platform = new Platform(syncConfig, persistence, broadcaster);
 			return platform;
 		}
 		throw new ExplorerError(explorerError.ERROR_1004, pltfrm);
