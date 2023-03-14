@@ -11,7 +11,8 @@
 	"sync": {
 		"type": "local",
 		"platform": "fabric",
-		"blocksSyncTime": "1"
+		"blocksSyncTime": "1",
+		"workdir": "/tmp/blockchain-explorer/"
 	},
 	"jwt": {
 		"secret": "a secret phrase!!",

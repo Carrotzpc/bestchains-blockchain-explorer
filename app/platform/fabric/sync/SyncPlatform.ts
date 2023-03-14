@@ -12,7 +12,10 @@ import { SyncServices } from '../sync/SyncService';
 import { FabricEvent } from './FabricEvent';
 import { FabricConfig } from '../FabricConfig';
 import { ExplorerError } from '../../../common/ExplorerError';
-import { explorerError } from '../../../common/ExplorerMessage';
+import {
+	explorerMessage,
+	explorerError
+} from '../../../common/ExplorerMessage';
 import * as FabricConst from '../utils/FabricConst';
 import * as FabricUtils from '../utils/FabricUtils';
 
@@ -30,6 +33,7 @@ const config_path = path.resolve(__dirname, '../config.json');
 export class SyncPlatform {
 	network_id: string;
 	network_name: string;
+	network_profile_path: string;
 	client: any;
 	eventHub: any;
 	sender: any;
@@ -47,13 +51,13 @@ export class SyncPlatform {
 	constructor(persistence: any, sender: any) {
 		this.network_id = null;
 		this.network_name = null;
+		this.network_profile_path = null;
 		this.client = null;
 		this.eventHub = null;
 		this.sender = sender;
 		this.persistence = persistence;
 		this.syncService = new SyncServices(this, this.persistence);
 		this.blocksSyncTime = 60000;
-		this.network_config = null;
 	}
 
 	/**
@@ -69,30 +73,16 @@ export class SyncPlatform {
 			args
 		);
 
-		// Loading the config.json
-		const all_config = JSON.parse(fs.readFileSync(config_path, 'utf8'));
-		const network_configs = all_config[fabric_const.NETWORK_CONFIGS];
+		this.network_id = args[0];
+		this.network_name = args[1];
+		this.network_profile_path = args[2];
 
-		if (args.length === 0) {
-			// Get the first network and first client
-			this.network_id = Object.keys(network_configs)[0];
-			this.network_name = network_configs[this.network_id].name;
-		} else if (args.length === 1) {
-			// Get the first client with respect to the passed network name
-			this.network_id = args[0];
-			this.network_name = Object.keys(network_configs[this.network_id].clients)[0];
-		} else {
-			this.network_id = args[0];
-			this.network_name = args[1];
-		}
-
-		logger.info(explorerError.MESSAGE_1002, this.network_id, this.network_name);
+		logger.info(explorerMessage.MESSAGE_1002, this.network_id, this.network_name);
 
 		logger.debug('Blocks synch interval time >> %s', this.blocksSyncTime);
 
-		this.network_config = network_configs[this.network_id];
 		const config = new FabricConfig();
-		config.initialize(this.network_id, this.network_config);
+		config.initialize(this.network_id, this.network_profile_path);
 
 		this.client = await FabricUtils.createFabricClient(config);
 		if (!this.client) {

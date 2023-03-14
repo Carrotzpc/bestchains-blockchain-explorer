@@ -15,12 +15,15 @@ import { authroutes } from './rest/authroutes';
 import { dbroutes } from './rest/dbroutes';
 import { platformroutes } from './rest/platformroutes';
 import { adminroutes } from './platform/fabric/rest/adminroutes';
+import { spiRoutes } from './platform/fabric/rest/spi-routes';
 import { explorerConst } from './common/ExplorerConst';
 import { explorerError } from './common/ExplorerMessage';
 import { authCheckMiddleware } from './middleware/auth-check';
 import swaggerDocument from './swagger.json';
 import { ExplorerError } from './common/ExplorerError';
 import { localLoginStrategy } from './passport/local-login';
+import * as fs from 'fs';
+
 
 /**
  *
@@ -96,9 +99,15 @@ export class Explorer {
 			explorerconfig[explorerconfig[explorerConst.PERSISTENCE]]
 		);
 
+		// prepare workdir for this blockchain-explorer
+		if(!fs.existsSync(explorerconfig[explorerConst.SYNC].workdir)){
+			fs.mkdirSync(explorerconfig[explorerConst.SYNC].workdir, { recursive: true });
+		}
+
 		for (const pltfrm of explorerconfig[explorerConst.PLATFORMS]) {
 			const platform = await PlatformBuilder.build(
 				pltfrm,
+				explorerconfig[explorerConst.SYNC],
 				this.persistence,
 				broadcaster
 			);
@@ -128,8 +137,11 @@ export class Explorer {
 			this.app.use('/auth', authrouter);
 			this.app.use('/api', apirouter);
 
-			// Initializing sync listener
-			platform.initializeListener(explorerconfig.sync);
+			// eslint-disable-next-line spellcheck/spell-checker
+			const spiRouter = Express.Router();
+			await spiRoutes(spiRouter, platform);
+			// eslint-disable-next-line spellcheck/spell-checker
+			this.app.use('/spi', spiRouter);
 
 			this.platforms.push(platform);
 		}

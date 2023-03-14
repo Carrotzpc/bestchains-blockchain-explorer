@@ -302,13 +302,33 @@ export class FabricGateway {
 	}
 
 	async queryChannels() {
+		let chansInConfig = new Map();
+		logger.info("chainsInConfig: ",this.config)
+		for (const channel_id in this.config.channels) {
+			logger.info("chainsInConfig.channel_id: ",channel_id);
+			chansInConfig.set(channel_id,true);
+		}
+		let allChannelsInNetwork:any = await this.queryChannelsFromNetwork()
+		let channels = new Array();
+		if(allChannelsInNetwork) {
+			logger.info("allChannelsInNetwork: ",allChannelsInNetwork);
+			for (const channel of allChannelsInNetwork.channels) {
+				if(chansInConfig.get(channel.channel_id)) {
+					channels.push(channel.channel_id)
+				}		
+			}
+		}
+		return channels;
+	}
+
+	async queryChannelsFromNetwork() {
 		const network = await this.gateway.getNetwork(this.defaultChannelName);
 
 		// Get the contract from the network.
 		const contract = network.getContract('cscc');
 		const result = await contract.evaluateTransaction('GetChannels');
 		const resultJson = fabprotos.protos.ChannelQueryResponse.decode(result);
-		logger.debug('queryChannels', resultJson);
+		logger.debug('queryChannelsFromNetwork', resultJson);
 		return resultJson;
 	}
 
@@ -491,18 +511,19 @@ export class FabricGateway {
 
 	async getActiveOrderersList(channel_name) {
 		const network = await this.gateway.getNetwork(channel_name);
-		let orderers = [];
-		for (let [orderer, ordererMetadata] of network.discoveryService.channel.committers) {
-			let ordererAtrributes = {
+		const orderers = [];
+		for (const [orderer, ordererMetadata] of network.discoveryService.channel
+			.committers) {
+			const ordererAtrributes = {
 				name: orderer,
 				connected: ordererMetadata.connected
-			}
+			};
 			orderers.push(ordererAtrributes);
 		}
 		return orderers;
 	}
 
-	async queryTransaction(channelName:string, txnId:string) {
+	async queryTransaction(channelName: string, txnId: string) {
 		try {
 			const network = await this.gateway.getNetwork(this.defaultChannelName);
 			// Get the contract from the network.

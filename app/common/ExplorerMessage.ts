@@ -32,8 +32,10 @@ export enum explorerError {
 	ERROR_2011 = 'There is no client found for Hyperledger fabric scanner',
 	ERROR_2013 = 'Channel name [%s] already exist in DB , Kindly re-run the DB scripts to proceed',
 	ERROR_2014 = 'Invalid platform configuration, Please check the log',
-	ERROR_2015 = 'Invalid network configuration, Please check the log',
+	ERROR_2015 = 'Invalid network configuration, Please check the log'
+}
 
+export enum explorerMessage {
 	// Generic Message
 	MESSAGE_1001 = 'Explorer will continue working with only DB data',
 	MESSAGE_1002 = 'Sync process is started for the network = [%s] and client = [%s]'

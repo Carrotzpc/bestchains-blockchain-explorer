@@ -36,9 +36,14 @@ export class FabricConfig {
 	 * @memberof FabricConfig
 	 */
 
-	initialize(network_id, network_config) {
+	initialize(network_id: string, network_config_profile: any) {
 		this.network_id = network_id;
-		const profile_path = path.resolve(__dirname, network_config.profile);
+		if (network_config_profile && typeof network_config_profile === 'object') {
+			logger.info("initialize with object %s",network_id)
+			this.config = network_config_profile;
+			return;
+		}
+		const profile_path = path.resolve(__dirname, network_config_profile);
 		const configJson = fs.readFileSync(profile_path, 'utf8');
 		this.config = JSON.parse(configJson);
 	}
